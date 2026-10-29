@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#244e40">
+  <meta name="description" content="Aura: tecnologia com design para o seu dia. Explore áudio, acessórios e novidades para o seu setup.">
+  <title>Aura — Tecnologia no seu ritmo</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#catalogo">Pular para os produtos</a>
+  <div class="announcement">Boas escolhas, boas conexões. <span>Frete grátis a partir de R$ 399</span> <span aria-hidden="true">↗</span></div>
+  <header class="header">
+    <div class="header-inner container">
+      <a class="logo" href="/" aria-label="Aura, início">aura<span>✳</span></a>
+      <nav aria-label="Menu principal">
+        <a class="active" href="#catalogo">Explorar</a>
+        <a href="#catalogo" data-nav-category="Áudio">Áudio</a>
+        <a href="#catalogo" data-nav-category="Setup">Seu setup</a>
+        <a href="#sobre">Sobre a Aura</a>
+      </nav>
+      <button id="open-cart" class="cart-button" aria-label="Abrir carrinho, 0 itens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span class="cart-label">Sacola</span><span id="cart-count">0</span></button>
+    </div>
+  </header>
+  <main>
+    <section class="hero container" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="small-dot"></span> MENOS COMPLICAÇÃO. MAIS CONEXÃO.</p>
+        <h1 id="hero-title">Tecnologia que<br>combina com<br><em>o seu ritmo.</em></h1>
+        <p class="hero-description">Design que inspira. Tecnologia que aproxima.<br>Descubra seus novos essenciais para o dia a dia.</p>
+        <a class="button primary" href="#catalogo">Encontre seu próximo favorito <span aria-hidden="true">↗</span></a>
+        <div class="hero-note"><span class="mini-stars" aria-hidden="true">✳ ✳ ✳</span><span>Pequenos detalhes.<br><strong>Grandes experiências.</strong></span></div>
+      </div>
+      <div class="hero-visual">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <span class="visual-caption">SINTA CADA DETALHE</span>
+        <span class="sound-label">SOM ON.<br>MUNDO OFF.</span>
+        <img class="hero-product" src="/images/headphone.svg" alt="Headphone Wave na cor areia" width="540" height="540">
+        <div class="round-sticker">BOM DESIGN<br><span>✳</span><br>BOAS VIBES</div>
+        <a class="hero-product-card" href="#catalogo"><span><small>SEU NOVO COMPANHEIRO</small><strong>Headphone Wave</strong><span>Conheça o seu próximo play</span></span><span class="circle-arrow" aria-hidden="true">↗</span></a>
+        <span class="edition">AURA ESSENTIALS — VOL. 01</span>
+      </div>
+    </section>
+    <section class="benefits container" aria-label="Benefícios da loja">
+      <div><span class="benefit-icon" aria-hidden="true">↗</span><span><strong>Vai com você</strong><small>Entrega para todo o Brasil</small></span></div>
+      <div><span class="benefit-icon" aria-hidden="true">◇</span><span><strong>Escolhas com cuidado</strong><small>Design e função em sintonia</small></span></div>
+      <div><span class="benefit-icon" aria-hidden="true">↺</span><span><strong>Compra sem complicação</strong><small>Um checkout simples e rápido</small></span></div>
+    </section>
+    <section id="catalogo" class="catalog container" aria-labelledby="catalog-title">
+      <div class="section-top"><div><p class="eyebrow">A CURADORIA AURA</p><h2 id="catalog-title">Seu dia, com um upgrade<span>.</span></h2></div><span class="collection-note">Feitos para fazer parte da sua rotina.</span></div>
+      <div class="catalog-toolbar">
+        <div id="categories" class="category-list" role="group" aria-label="Filtrar por categoria">
+          <button class="category active" data-category="Todos" aria-pressed="true">Todos <span>08</span></button>
+          <button class="category" data-category="Áudio" aria-pressed="false">Áudio</button>
+          <button class="category" data-category="Wearables" aria-pressed="false">Wearables</button>
+          <button class="category" data-category="Setup" aria-pressed="false">Setup</button>
+          <button class="category" data-category="Lifestyle" aria-pressed="false">Lifestyle</button>
+          <button class="category" data-category="Acessórios" aria-pressed="false">Acessórios</button>
+        </div>
+        <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="search" type="search" placeholder="O que você procura?" aria-label="Buscar produtos" maxlength="100"></label>
+      </div>
+      <div class="results-toolbar"><p id="result-count" aria-live="polite">Carregando a sua próxima descoberta…</p><label>Ordenar por <select id="sort" aria-label="Ordenar produtos"><option value="featured">Destaques</option><option value="price-asc">Menor preço</option><option value="price-desc">Maior preço</option><option value="name">Nome A–Z</option></select></label></div>
+      <div id="products" class="product-grid" aria-busy="true"></div>
+      <div id="catalog-state" class="empty-state" hidden><span aria-hidden="true">✳</span><h3 id="state-title"></h3><p id="state-message"></p><button id="retry" class="button secondary" hidden>Tentar novamente</button><button id="clear-filters" class="button secondary" hidden>Limpar filtros</button></div>
+    </section>
+    <section id="sobre" class="about container"><div><p class="eyebrow">PRAZER, SOMOS A AURA</p><h2>O essencial pode<br>ser extraordinário.</h2><p>Acreditamos na tecnologia que simplifica e no design que faz sentir. Uma seleção pensada para o seu trabalho, suas pausas e tudo o que acontece no meio.</p><a href="#catalogo">Explore a coleção <span aria-hidden="true">↗</span></a></div><div class="about-art" aria-hidden="true"><span>menos ruído.<br>mais <em>você.</em></span><b>✳</b><small>DESIGN COM PROPÓSITO. TODOS OS DIAS.</small></div></section>
+  </main>
+  <footer class="footer container"><a class="logo" href="/">aura<span>✳</span></a><p>Boas conexões começam aqui.</p><small>Loja demonstrativa · Nenhum pagamento é cobrado.</small><a href="#hero-title">Voltar ao topo ↑</a></footer>
+
+  <dialog id="cart-dialog" class="drawer" aria-labelledby="cart-title">
+    <div class="dialog-header"><div><p class="eyebrow">SUAS ESCOLHAS</p><h2 id="cart-title">Sua sacola<span>.</span></h2></div><button class="icon-button" data-close aria-label="Fechar sacola">×</button></div>
+    <div id="shipping-progress" class="shipping-progress"></div>
+    <div id="cart-items" class="cart-items"></div>
+    <div id="cart-summary" class="cart-summary"></div>
+  </dialog>
+  <dialog id="checkout-dialog" class="checkout-dialog" aria-labelledby="checkout-title">
+    <div class="dialog-header"><div><p class="eyebrow">FALTA POUCO</p><h2 id="checkout-title">Quase seu<span>.</span></h2></div><button class="icon-button" data-close aria-label="Fechar checkout">×</button></div>
+    <p class="demo-notice">Checkout demonstrativo. Nenhum pagamento será solicitado ou cobrado. Use dados fictícios.</p>
+    <form id="checkout-form">
+      <label>Nome completo<input name="name" autocomplete="name" placeholder="Como podemos chamar você?" required maxlength="100"></label>
+      <label>E-mail<input name="email" type="email" autocomplete="email" placeholder="voce@exemplo.com" required maxlength="254"></label>
+      <label>Endereço e número<input name="address" autocomplete="street-address" placeholder="Rua, número e complemento" required maxlength="200"></label>
+      <div class="form-row"><label>Cidade<input name="city" autocomplete="address-level2" placeholder="Sua cidade" required maxlength="100"></label><label>CEP<input name="zipCode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000" pattern="[0-9]{5}-?[0-9]{3}" required maxlength="9" title="Informe os 8 dígitos do CEP"></label></div>
+      <div id="checkout-total" class="checkout-total"></div>
+      <p id="checkout-error" class="form-error" role="alert" hidden></p>
+      <button id="submit-order" class="button primary full-width" type="submit">Confirmar pedido demonstrativo <span aria-hidden="true">↗</span></button>
+      <button id="back-to-cart" class="text-button" type="button">← Voltar para a sacola</button>
+    </form>
+  </dialog>
+  <dialog id="success-dialog" class="success-dialog" aria-labelledby="success-title"><button class="icon-button success-close" data-close aria-label="Fechar confirmação">×</button><div class="success-symbol" aria-hidden="true">✓</div><p class="eyebrow">BOAS ESCOLHAS!</p><h2 id="success-title">Deu match com<br>o seu ritmo<span>.</span></h2><p>Seu pedido demonstrativo foi registrado.<br>Nenhum valor foi cobrado e não haverá envio.</p><div id="receipt"></div><button class="button primary full-width" data-close>Continuar explorando <span aria-hidden="true">↗</span></button></dialog>
+  <dialog id="product-dialog" class="product-dialog" aria-labelledby="detail-name"><button class="icon-button success-close" data-close aria-label="Fechar detalhes">×</button><div id="product-detail"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

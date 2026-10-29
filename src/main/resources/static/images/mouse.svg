@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none"><defs>
+    <linearGradient id="sand" x1="0" x2="1" y2="1"><stop stop-color="#e4d7be"/><stop offset=".45" stop-color="#cdbb9a"/><stop offset="1" stop-color="#a59376"/></linearGradient>
+    <linearGradient id="soft" x2=".8" y2="1"><stop stop-color="#f5ecda"/><stop offset=".5" stop-color="#d9cbb2"/><stop offset="1" stop-color="#bcab8c"/></linearGradient>
+    <linearGradient id="dark" x2="1" y2="1"><stop stop-color="#505b52"/><stop offset=".5" stop-color="#303c33"/><stop offset="1" stop-color="#17261f"/></linearGradient>
+    <linearGradient id="sage" x2="1" y2="1"><stop stop-color="#a7b59c"/><stop offset=".5" stop-color="#819577"/><stop offset="1" stop-color="#60765a"/></linearGradient>
+    <linearGradient id="white" x2=".8" y2="1"><stop stop-color="#fffef6"/><stop offset=".5" stop-color="#edece2"/><stop offset="1" stop-color="#c6c9bb"/></linearGradient>
+    <linearGradient id="screen" x2="1" y2="1"><stop stop-color="#243a2d"/><stop offset="1" stop-color="#0e1e16"/></linearGradient>
+    <pattern id="mesh" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".8" fill="#30402b" opacity=".45"/></pattern>
+    </defs><g transform="rotate(-20 250 250)"><path d="M153 235c0-90 37-129 97-129s97 39 97 129v61c0 73-41 110-97 110s-97-37-97-110v-61Z" fill="#647956"/><path d="M150 226c0-90 40-128 100-128s100 38 100 128v61c0 73-44 110-100 110s-100-37-100-110v-61Z" fill="url(#sage)"/><path d="M250 99v125" stroke="#617451" stroke-width="2"/><path d="M153 240c70-20 124-20 194 0" stroke="#6d815c" stroke-width="2"/><rect x="241" y="147" width="18" height="49" rx="9" fill="#435c3a"/><path d="M246 155v31" stroke="#93a67d" stroke-width="3" stroke-dasharray="2 3"/><text x="231" y="342" fill="#c7d1b8" font-family="Arial" font-size="15">aura</text></g></svg>
