@@ -1,0 +1,9 @@
+target
+.git
+.env
+.idea
+.vscode
+*.log
+.agents
+.aws
+.codex
