@@ -4,7 +4,13 @@
   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.5.7</version><relativePath/></parent>
   <groupId>br.com.aura</groupId><artifactId>store</artifactId><version>1.0.0</version>
   <name>Aura Store</name><description>E-commerce demonstrativo em Java</description>
-  <properties><java.version>21</java.version></properties>
+  <properties>
+    <java.version>21</java.version>
+    <playwright.version>1.65.1</playwright.version>
+    <!-- Testes E2E (tag "e2e") precisam de navegador: rodam só com -Pe2e. -->
+    <test.excludedGroups>e2e</test.excludedGroups>
+    <test.groups></test.groups>
+  </properties>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
@@ -15,6 +21,28 @@
     <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
     <dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>com.microsoft.playwright</groupId><artifactId>playwright</artifactId><version>${playwright.version}</version><scope>test</scope></dependency>
   </dependencies>
-  <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
+  <build>
+    <plugins>
+      <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <groups>${test.groups}</groups>
+          <excludedGroups>${test.excludedGroups}</excludedGroups>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <!-- mvn verify -Pe2e  →  executa somente os testes de interface (Playwright). -->
+    <profile>
+      <id>e2e</id>
+      <properties>
+        <test.groups>e2e</test.groups>
+        <test.excludedGroups></test.excludedGroups>
+      </properties>
+    </profile>
+  </profiles>
 </project>

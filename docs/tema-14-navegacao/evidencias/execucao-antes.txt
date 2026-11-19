@@ -1,0 +1,17 @@
+# Execução ANTES das correções — mvn -B verify -Pe2e (Chromium)
+
+[ERROR] Tests run: 22, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 94.96 s <<< FAILURE! -- in Tema 14 — Navegação da loja Aura
+[ERROR] br.com.aura.store.e2e.NavigationE2ETest.logoRedirecionaParaInicio -- Time elapsed: 5.256 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+Locator expected to be in viewport
+Call log:
+[ERROR] br.com.aura.store.e2e.NavigationE2ETest.linkDiretoAbreNaSecao -- Time elapsed: 5.160 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+Locator expected to be in viewport
+Call log:
+[ERROR] br.com.aura.store.e2e.NavigationE2ETest.rotaInexistenteRedirecionaParaLoja -- Time elapsed: 5.101 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+Page title expected to match regex
+Expected: Página não encontrada
+
+[ERROR] Tests run: 22, Failures: 3, Errors: 0, Skipped: 0

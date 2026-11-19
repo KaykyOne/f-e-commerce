@@ -85,6 +85,18 @@ Com Node.js 22+, os testes do carrinho, cálculo de frete, busca e tratamento do
 node --test scripts/test-frontend.cjs
 ```
 
+### Testes de navegação (interface) — Playwright
+
+Testes E2E que abrem um navegador real e percorrem menus, links, botões, sacola, checkout, página 404 e versão mobile. Ficam fora do `mvn verify` padrão (marcados com `@Tag("e2e")`) e rodam com o perfil `e2e`:
+
+```bash
+mvn verify -Pe2e                              # Chromium
+mvn verify -Pe2e -Dbrowser=firefox            # Firefox
+mvn verify -Pe2e -Dheaded=true -DslowMo=500   # janela visível, para demonstração
+```
+
+Screenshots de cada teste ficam em `target/evidencias/navegacao/`. Relatório completo do tema em [docs/tema-14-navegacao/RELATORIO.md](docs/tema-14-navegacao/RELATORIO.md). A CI executa esses testes em Chromium e Firefox a cada push.
+
 Para desenvolver sem colocar o Java em um container:
 
 ```bash
@@ -105,7 +117,8 @@ As configurações locais padrão se conectam ao PostgreSQL em `localhost:5432`,
 src/main/java/br/com/aura/store/   API, validação e transação de compra
 src/main/resources/db/migration/ Schema e catálogo inicial
 src/main/resources/static/       Loja, estilos e ilustrações SVG locais
-src/test/                        Testes de integração
+src/test/                        Testes de integração e de navegação (Playwright)
+docs/tema-14-navegacao/          Relatório e evidências do teste de navegação
 scripts/smoke-test.sh            Verificação da aplicação em execução
 Dockerfile                      Build com testes + runtime Java 21
 compose.yaml                    Aplicação e PostgreSQL persistente
