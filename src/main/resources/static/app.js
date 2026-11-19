@@ -11,6 +11,7 @@ let cart = readCart();
 let toastTimer;
 let ordering = false;
 let catalogReady = false;
+let hashRestored = false;
 
 function readCart() {
   try {
@@ -55,6 +56,7 @@ async function loadProducts() {
     if (changed) toast('Sua sacola foi atualizada conforme o estoque disponível.');
     $('[data-category="Todos"] span').textContent = String(products.length).padStart(2, '0');
     renderProducts();
+    restoreHashTarget();
   } catch {
     catalogReady = false;
     $('#products').innerHTML = '';
@@ -64,6 +66,15 @@ async function loadProducts() {
     $('#products').setAttribute('aria-busy', 'false');
     if ($('#cart-dialog').open) renderCart();
   }
+}
+
+// Links diretos como /#sobre: o catálogo chega depois do primeiro scroll do navegador e
+// empurra as seções para baixo. Após a primeira renderização, volta à seção pedida.
+function restoreHashTarget() {
+  if (hashRestored) return;
+  hashRestored = true;
+  if (location.hash.length < 2) return;
+  try { document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView(); } catch { /* hash inválido: mantém a posição */ }
 }
 
 function showState(title, message, retry = false) {
