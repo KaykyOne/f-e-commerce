@@ -1,0 +1,7 @@
+# Execução DEPOIS das correções — mvn -B verify -Pe2e
+
+## Navegador: chromium
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+
+## Navegador: firefox
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
