@@ -126,6 +126,8 @@ identidade visual e **sem nenhum link de volta** para a loja
 Os testes também foram executados 3 vezes seguidas, sem falhas intermitentes. Os 7 testes de
 integração que já existiam continuam passando no `mvn verify` padrão.
 
+Apresentação: [`Apresentacao-Tema14-Navegacao.pptx`](Apresentacao-Tema14-Navegacao.pptx) (com notas do apresentador).
+
 Evidências: [`evidencias/`](evidencias/) (antes/depois e prints de cada fluxo),
 [`execucao-antes.txt`](evidencias/execucao-antes.txt) e
 [`execucao-depois.txt`](evidencias/execucao-depois.txt). Na CI, cada execução publica os
