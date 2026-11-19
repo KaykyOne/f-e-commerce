@@ -8,6 +8,7 @@
   <title>Aura — Tecnologia no seu ritmo</title>
   <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
+  <script src="/session.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -22,7 +23,10 @@
         <a href="#catalogo" data-nav-category="Setup">Seu setup</a>
         <a href="#sobre">Sobre a Aura</a>
       </nav>
-      <button id="open-cart" class="cart-button" aria-label="Abrir carrinho, 0 itens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span class="cart-label">Sacola</span><span id="cart-count">0</span></button>
+      <div class="header-actions">
+        <a id="account-link" class="account-link" href="/entrar" aria-label="Entrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span class="account-label">Entrar</span></a>
+        <button id="open-cart" class="cart-button" aria-label="Abrir carrinho, 0 itens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg><span class="cart-label">Sacola</span><span id="cart-count">0</span></button>
+      </div>
     </div>
   </header>
   <main>
@@ -79,9 +83,9 @@
   <dialog id="checkout-dialog" class="checkout-dialog" aria-labelledby="checkout-title">
     <div class="dialog-header"><div><p class="eyebrow">FALTA POUCO</p><h2 id="checkout-title">Quase seu<span>.</span></h2></div><button class="icon-button" data-close aria-label="Fechar checkout">×</button></div>
     <p class="demo-notice">Checkout demonstrativo. Nenhum pagamento será solicitado ou cobrado. Use dados fictícios.</p>
+    <p class="checkout-account">Pedido na conta <strong id="checkout-email"></strong></p>
     <form id="checkout-form">
       <label>Nome completo<input name="name" autocomplete="name" placeholder="Como podemos chamar você?" required maxlength="100"></label>
-      <label>E-mail<input name="email" type="email" autocomplete="email" placeholder="voce@exemplo.com" required maxlength="254"></label>
       <label>Endereço e número<input name="address" autocomplete="street-address" placeholder="Rua, número e complemento" required maxlength="200"></label>
       <div class="form-row"><label>Cidade<input name="city" autocomplete="address-level2" placeholder="Sua cidade" required maxlength="100"></label><label>CEP<input name="zipCode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000" pattern="[0-9]{5}-?[0-9]{3}" required maxlength="9" title="Informe os 8 dígitos do CEP"></label></div>
       <div id="checkout-total" class="checkout-total"></div>
@@ -90,7 +94,7 @@
       <button id="back-to-cart" class="text-button" type="button">← Voltar para a sacola</button>
     </form>
   </dialog>
-  <dialog id="success-dialog" class="success-dialog" aria-labelledby="success-title"><button class="icon-button success-close" data-close aria-label="Fechar confirmação">×</button><div class="success-symbol" aria-hidden="true">✓</div><p class="eyebrow">BOAS ESCOLHAS!</p><h2 id="success-title">Deu match com<br>o seu ritmo<span>.</span></h2><p>Seu pedido demonstrativo foi registrado.<br>Nenhum valor foi cobrado e não haverá envio.</p><div id="receipt"></div><button class="button primary full-width" data-close>Continuar explorando <span aria-hidden="true">↗</span></button></dialog>
+  <dialog id="success-dialog" class="success-dialog" aria-labelledby="success-title"><button class="icon-button success-close" data-close aria-label="Fechar confirmação">×</button><div class="success-symbol" aria-hidden="true">✓</div><p class="eyebrow">BOAS ESCOLHAS!</p><h2 id="success-title">Deu match com<br>o seu ritmo<span>.</span></h2><p>Seu pedido demonstrativo foi registrado.<br>Nenhum valor foi cobrado e não haverá envio.</p><div id="receipt"></div><button class="button primary full-width" data-close>Continuar explorando <span aria-hidden="true">↗</span></button><a class="text-button" href="/conta#pedidos">Ver meus pedidos</a></dialog>
   <dialog id="product-dialog" class="product-dialog" aria-labelledby="detail-name"><button class="icon-button success-close" data-close aria-label="Fechar detalhes">×</button><div id="product-detail"></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>

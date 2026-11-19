@@ -4,9 +4,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.util.List;
 
+/** O e-mail do pedido vem da conta do cliente logado, não do formulário. */
 public record CheckoutRequest(
         @NotBlank @Size(max = 100) String name,
-        @NotBlank @Email @Size(max = 254) String email,
         @NotBlank @Size(max = 200) String address,
         @NotBlank @Size(max = 100) String city,
         @NotBlank @Pattern(regexp = "[0-9]{5}-?[0-9]{3}", message = "deve ter 8 dígitos") String zipCode,
