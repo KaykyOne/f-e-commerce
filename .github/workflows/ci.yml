@@ -20,3 +20,30 @@ jobs:
       - run: bash scripts/smoke-test.sh
       - if: always()
         run: docker compose logs && docker compose down -v
+
+  # Tema 14 — Teste de interface (navegação) com Playwright, em Chromium e Firefox.
+  navegacao-e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Instalar navegador do Playwright
+        run: mvn -B -Pe2e test-compile exec:java -Dexec.classpathScope=test -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps ${{ matrix.browser }}"
+      - name: Testes de navegação
+        run: mvn -B verify -Pe2e -Dbrowser=${{ matrix.browser }}
+      - name: Publicar evidências (screenshots e relatório)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-navegacao-${{ matrix.browser }}
+          path: |
+            target/evidencias/
+            target/surefire-reports/
