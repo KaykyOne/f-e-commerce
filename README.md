@@ -31,43 +31,60 @@ docker compose up --build -d
 
 A senha padrão é exclusivamente de desenvolvimento local. Alterar `DB_PASSWORD` depois de criar o volume também exige alterar a senha do usuário no PostgreSQL existente.
 
+## Perfis de acesso
+
+| Perfil | O que pode fazer | Onde |
+| --- | --- | --- |
+| **Visitante** | Navegar, buscar, montar a sacola, criar conta e entrar | `/`, `/entrar`, `/cadastro` |
+| **Cliente** | Tudo do visitante + finalizar compras, editar o perfil, trocar a senha e ver **Meus pedidos** | `/conta` |
+| **Administrador** | Painel com resumo da loja, cadastro/edição/desativação de produtos e lista de todos os pedidos | `/admin` |
+
+Contas de demonstração (somente desenvolvimento):
+
+- **Administrador:** `admin@aura.dev` / `AuraAdmin2026`. É criado na primeira inicialização. Em outro ambiente, defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` no `.env` antes de subir.
+- **Cliente:** crie a sua em **Entrar → Criar conta**. Todo cadastro público gera um cliente; ninguém vira administrador pela loja.
+
+Regras de navegação:
+
+- Visitante que abre `/conta` ou `/admin` é redirecionado para `/entrar?next=...` e volta para a página depois de entrar.
+- Visitante que tenta finalizar a compra vai ao login e retorna com a sacola aberta.
+- Cliente que abre `/admin` recebe a página **403** da loja, com caminho de volta.
+- Rotas inexistentes mostram a página **404** da loja.
+
 ## Funcionalidades
 
 - Oito produtos iniciais, detalhes, busca sem distinção de acentos, categorias e ordenação.
 - Sacola com quantidade, remoção e persistência em `localStorage`.
 - Frete de R$ 19,90; grátis em pedidos a partir de R$ 399,00.
-- Checkout com validação de nome, e-mail, endereço, cidade, CEP e itens.
+- Checkout exclusivo para clientes logados, preenchido com os dados do perfil e validado no servidor (nome, endereço, cidade, CEP e itens). O e-mail do pedido vem da conta.
+- Autenticação com Spring Security: sessão no servidor, senhas com bcrypt, proteção CSRF, nova sessão após o login e mensagem de erro que não revela se o e-mail existe.
+- Exclusão lógica de produtos pelo administrador: o produto sai da loja, mas os pedidos antigos continuam íntegros.
 - Valores calculados no servidor com `BigDecimal`; o cliente envia apenas IDs e quantidades dos produtos.
 - Pedido e itens persistidos com cópia do nome e preço no momento da compra.
 - Baixa de estoque transacional com `SELECT … FOR UPDATE`, evitando venda acima do estoque em compras simultâneas. Uma falha desfaz o pedido inteiro.
 - Migrações Flyway, healthchecks, imagem em duas etapas e execução como usuário sem privilégios.
 
-**É uma demonstração:** não há pagamento, envio, autenticação, painel administrativo, cálculo real de frete ou integração com transportadoras. Use dados fictícios. O checkout registra o pedido e reduz o estoque, mas não cobra nem envia nada. Não há endpoint público de consulta a dados pessoais dos pedidos. Em caso de perda de conexão durante a confirmação, confira o banco antes de reenviar: o endpoint não implementa idempotência.
+**É uma demonstração:** não há pagamento, envio, recuperação de senha, limite de tentativas de login, cálculo real de frete ou integração com transportadoras. Use dados fictícios. O checkout registra o pedido e reduz o estoque, mas não cobra nem envia nada. Não há endpoint público de consulta a dados pessoais dos pedidos. Em caso de perda de conexão durante a confirmação, confira o banco antes de reenviar: o endpoint não implementa idempotência.
 
 ## API
 
 | Método | Endpoint | Resultado |
 | --- | --- | --- |
-| GET | `/api/products` | Catálogo com preços e estoque |
-| POST | `/api/orders` | Cria pedido demonstrativo, retorna recibo e baixa estoque |
+| GET | `/api/products` | Catálogo (produtos ativos) com preços e estoque |
+| GET | `/api/auth/me` | Sessão atual (`authenticated: false` para visitante) |
+| POST | `/api/auth/register` | Cria conta de cliente e já entra |
+| POST | `/api/auth/login` · `/api/auth/logout` | Entra · sai |
+| PUT | `/api/account` · `/api/account/password` | Cliente: edita o perfil · troca a senha |
+| GET | `/api/account/orders` | Cliente: seus pedidos |
+| POST | `/api/orders` | Cliente: cria pedido demonstrativo e baixa o estoque |
+| GET | `/api/admin/summary` · `/api/admin/orders` | Admin: resumo da loja · todos os pedidos |
+| GET/POST | `/api/admin/products` | Admin: lista (inclui desativados) · cadastra |
+| PUT/DELETE | `/api/admin/products/{id}` | Admin: edita · desativa |
 | GET | `/actuator/health` | Saúde da aplicação e conexão com o banco |
 
-Exemplo de compra (consome uma unidade do estoque):
+Requisições que alteram dados (POST, PUT, DELETE) exigem sessão e o cabeçalho `X-XSRF-TOKEN` com o valor do cookie `XSRF-TOKEN`. O frontend já faz isso. Sem login, a API responde `401`; sem permissão, `403`.
 
-```bash
-curl -i http://localhost:8080/api/orders \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "Cliente de Teste",
-    "email": "teste@example.com",
-    "address": "Rua Exemplo, 123",
-    "city": "São Paulo",
-    "zipCode": "01001-000",
-    "items": [{"productId": 1, "quantity": 1}]
-  }'
-```
-
-Retorna `201` com ID UUID, status `DEMO_CONFIRMED`, subtotal, frete, total e itens. Dados inválidos retornam `400`, produto inexistente `404`, estoque insuficiente `409`. Campos desconhecidos, como preço enviado pelo cliente, são rejeitados. Limite: 50 linhas no pedido e 99 unidades por produto, incluindo linhas repetidas.
+O pedido retorna `201` com ID UUID, status `DEMO_CONFIRMED`, subtotal, frete, total e itens. Dados inválidos retornam `400`, produto inexistente `404`, estoque insuficiente `409`. Campos desconhecidos, como preço enviado pelo cliente, são rejeitados. Limite: 50 linhas no pedido e 99 unidades por produto, incluindo linhas repetidas.
 
 ## Desenvolvimento e testes
 
@@ -77,7 +94,7 @@ Com JDK 21+ e Maven 3.6.3+ instalados:
 mvn verify
 ```
 
-Os testes de integração usam H2 em modo PostgreSQL e cobrem preços, frete, validação, persistência, rollback e concorrência. Não dependem de um PostgreSQL externo. A CI também sobe o Compose com PostgreSQL e executa o smoke test.
+Os testes de integração usam H2 em modo PostgreSQL e cobrem preços, frete, validação, persistência, rollback, concorrência e o controle de acesso dos três perfis (`AccessControlTest`). Não dependem de um PostgreSQL externo. A CI também sobe o Compose com PostgreSQL e executa o smoke test.
 
 Com Node.js 22+, os testes do carrinho, cálculo de frete, busca e tratamento do armazenamento podem ser executados sem instalar dependências:
 
@@ -87,7 +104,7 @@ node --test scripts/test-frontend.cjs
 
 ### Testes de navegação (interface) — Playwright
 
-Testes E2E que abrem um navegador real e percorrem menus, links, botões, sacola, checkout, página 404 e versão mobile. Ficam fora do `mvn verify` padrão (marcados com `@Tag("e2e")`) e rodam com o perfil `e2e`:
+Testes E2E que abrem um navegador real e percorrem menus, links, botões, sacola, checkout, login, cadastro, área do cliente, painel do administrador, páginas 403/404 e versão mobile. Ficam fora do `mvn verify` padrão (marcados com `@Tag("e2e")`) e rodam com o perfil `e2e`:
 
 ```bash
 mvn verify -Pe2e                              # Chromium
@@ -115,8 +132,9 @@ As configurações locais padrão se conectam ao PostgreSQL em `localhost:5432`,
 
 ```text
 src/main/java/br/com/aura/store/   API, validação e transação de compra
+  security/  account/  admin/       Spring Security e perfis · conta do cliente · painel admin
 src/main/resources/db/migration/ Schema e catálogo inicial
-src/main/resources/static/       Loja, estilos e ilustrações SVG locais
+src/main/resources/static/       Loja, entrar, cadastro, conta, admin, páginas 403/404 e SVGs
 src/test/                        Testes de integração e de navegação (Playwright)
 docs/tema-14-navegacao/          Relatório e evidências do teste de navegação
 scripts/smoke-test.sh            Verificação da aplicação em execução
@@ -129,3 +147,13 @@ A versão Java escolhida é compatível com a linha do framework: [requisitos of
 ### Validação no ambiente de criação
 
 A configuração do Compose, a sintaxe do JavaScript e os testes de frontend foram verificados localmente. O ambiente de criação não permite acesso ao daemon Docker, resolução DNS para baixar dependências Maven ou abertura de portas. Por isso, o build Java, os testes de integração Java e a inspeção visual no navegador precisam ser executados em um ambiente com esses recursos. O Dockerfile executa `mvn verify` e a CI cobre a inicialização com PostgreSQL real.
+
+
+## TESTES:
+
+```bash
+mvn verify -Pe2e                              # testes de navegação no Chromium (sem janela)
+mvn verify -Pe2e -Dbrowser=firefox            # mesmos testes no Firefox
+mvn verify -Pe2e -Dheaded=true -DslowMo=500   # janela aberta em câmera lenta, bom para a apresentação
+mvn verify                                    # testes de backend (catálogo, pedidos e perfis)
+```

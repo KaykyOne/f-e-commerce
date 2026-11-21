@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#244e40">
+  <title>Criar conta — Aura</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/session.js" defer></script>
+  <script src="/auth.js" defer></script>
+</head>
+<body class="subpage">
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="header">
+    <div class="header-inner container">
+      <a class="logo" href="/" aria-label="Aura, início">aura<span>✳</span></a>
+      <nav aria-label="Menu principal">
+        <a href="/">Loja</a>
+        <a href="/#catalogo">Produtos</a>
+      </nav>
+      <div class="header-actions">
+        <a id="account-link" class="account-link" href="/entrar" aria-label="Entrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span class="account-label">Entrar</span></a>
+      </div>
+    </div>
+  </header>
+  <main id="conteudo" class="page-main container">
+    <section class="auth-card" aria-labelledby="page-title">
+      <p class="eyebrow">BEM-VINDO À AURA</p>
+      <h1 id="page-title">Criar conta<span>.</span></h1>
+      <p class="panel-lead">Com a conta você finaliza compras e acompanha seus pedidos.</p>
+      <form id="register-form">
+        <label class="field">Nome completo<input name="name" autocomplete="name" required maxlength="100" placeholder="Como podemos chamar você?"></label>
+        <label class="field">E-mail<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="voce@exemplo.com"></label>
+        <label class="field">Senha<input name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="72" pattern="(?=.*[A-Za-zÀ-ÿ])(?=.*\d).{8,72}" aria-describedby="password-rule"></label>
+        <small id="password-rule" class="field-hint">Mínimo de 8 caracteres, com letras e números.</small>
+        <label class="field">Confirmar senha<input name="confirm" type="password" autocomplete="new-password" required maxlength="72"></label>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+        <button class="button primary full-width" type="submit">Criar minha conta <span aria-hidden="true">↗</span></button>
+      </form>
+      <p class="auth-switch">Já tem conta? <a id="switch-link" href="/entrar">Entrar</a></p>
+    </section>
+  </main>
+  <footer class="footer container"><a class="logo" href="/">aura<span>✳</span></a><p>Boas conexões começam aqui.</p><small>Loja demonstrativa · Nenhum pagamento é cobrado.</small></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

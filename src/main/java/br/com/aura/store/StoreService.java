@@ -1,5 +1,6 @@
 package br.com.aura.store;
 
+import br.com.aura.store.security.AuraUser;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.http.HttpStatus;
@@ -23,11 +24,11 @@ public class StoreService {
     public StoreService(JdbcTemplate db) { this.db = db; }
 
     public List<Product> products() {
-        return db.query("SELECT * FROM products ORDER BY id", PRODUCT);
+        return db.query("SELECT * FROM products WHERE active ORDER BY id", PRODUCT);
     }
 
     @Transactional
-    public OrderReceipt checkout(CheckoutRequest request) {
+    public OrderReceipt checkout(AuraUser customer, CheckoutRequest request) {
         // Lock in a stable order so concurrent checkouts cannot oversell or deadlock each other.
         Map<Long, Integer> quantities = new TreeMap<>();
         request.items().forEach(item -> quantities.merge(item.productId(), item.quantity(), Integer::sum));
@@ -37,7 +38,7 @@ public class StoreService {
             if (entry.getValue() > 99) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Limite de 99 unidades por produto.");
             }
-            var found = db.query("SELECT * FROM products WHERE id = ? FOR UPDATE", PRODUCT, entry.getKey());
+            var found = db.query("SELECT * FROM products WHERE id = ? AND active FOR UPDATE", PRODUCT, entry.getKey());
             if (found.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado.");
             Product product = found.getFirst();
             if (product.stock() < entry.getValue()) {
@@ -50,9 +51,9 @@ public class StoreService {
         BigDecimal shipping = subtotal.compareTo(FREE_SHIPPING) >= 0 ? new BigDecimal("0.00") : SHIPPING;
         UUID id = UUID.randomUUID();
         db.update("""
-                INSERT INTO orders (id, customer_name, email, address, city, zip_code, status, subtotal, shipping, total)
-                VALUES (?, ?, ?, ?, ?, ?, 'DEMO_CONFIRMED', ?, ?, ?)
-                """, id, request.name().strip(), request.email().strip(), request.address().strip(),
+                INSERT INTO orders (id, user_id, customer_name, email, address, city, zip_code, status, subtotal, shipping, total)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'DEMO_CONFIRMED', ?, ?, ?)
+                """, id, customer.id(), request.name().strip(), customer.email(), request.address().strip(),
                 request.city().strip(), request.zipCode(), subtotal, shipping, subtotal.add(shipping));
         for (var line : lines) {
             db.update("INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?, ?)",

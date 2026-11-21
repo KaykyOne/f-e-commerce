@@ -1,6 +1,8 @@
 package br.com.aura.store;
 
+import br.com.aura.store.security.AuraUser;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -16,7 +18,7 @@ public class StoreController {
 
     @PostMapping("/orders")
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderReceipt checkout(@Valid @RequestBody CheckoutRequest request) {
-        return store.checkout(request);
+    public OrderReceipt checkout(@AuthenticationPrincipal AuraUser customer, @Valid @RequestBody CheckoutRequest request) {
+        return store.checkout(customer, request);
     }
 }

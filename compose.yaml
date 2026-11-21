@@ -7,6 +7,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/aura
       SPRING_DATASOURCE_USERNAME: aura
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-aura_local_dev}
+      APP_ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@aura.dev}
+      APP_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AuraAdmin2026}
     depends_on:
       db:
         condition: service_healthy

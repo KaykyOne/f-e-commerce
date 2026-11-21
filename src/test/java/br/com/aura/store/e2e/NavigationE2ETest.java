@@ -8,6 +8,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.ReducedMotion;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -23,7 +24,12 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import br.com.aura.store.security.AuraUser;
+import br.com.aura.store.security.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 import java.nio.file.Path;
@@ -54,7 +60,14 @@ class NavigationE2ETest {
 
     private static final Path EVIDENCIAS = Paths.get("target", "evidencias", "navegacao");
 
+    /** Contas usadas nos testes. O administrador é criado na inicialização (application.properties de teste). */
+    private static final String CLIENTE = "cliente.e2e@aura.dev", SENHA_CLIENTE = "Cliente2026";
+    private static final String ADMIN = "admin@aura.dev", SENHA_ADMIN = "AuraAdmin2026";
+
     @LocalServerPort int port;
+    @Autowired JdbcTemplate db;
+    @Autowired UserRepository users;
+    @Autowired PasswordEncoder encoder;
 
     private Playwright playwright;
     private Browser browser;
@@ -85,6 +98,17 @@ class NavigationE2ETest {
     }
 
     @BeforeEach
+    void bancoConhecido() {
+        db.update("DELETE FROM order_items");
+        db.update("DELETE FROM orders");
+        db.update("DELETE FROM users WHERE role = 'CUSTOMER'");
+        db.update("DELETE FROM products WHERE id >= 100");
+        db.update("UPDATE products SET active = TRUE, stock = 20");
+        long id = users.create("Ana Cliente", CLIENTE, encoder.encode(SENHA_CLIENTE), AuraUser.Role.CUSTOMER);
+        db.update("UPDATE users SET address = 'Rua Exemplo, 123', city = 'São Paulo', zip_code = '01001-000' WHERE id = ?", id);
+    }
+
+    @BeforeEach
     void novaAba() {
         // Contexto novo por teste = navegador "limpo" (sem sacola salva no localStorage).
         context = browser.newContext(new Browser.NewContextOptions()
@@ -111,6 +135,24 @@ class NavigationE2ETest {
     private void abrirLoja() {
         page.navigate("/");
         assertThat(page.locator(".product-card")).hasCount(8);
+    }
+
+    private void entrar(String email, String senha) {
+        page.getByLabel("E-mail").fill(email);
+        page.getByLabel("Senha").fill(senha);
+        page.locator("#login-form").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Entrar")).click();
+    }
+
+    private void entrarComo(String email, String senha, String destinoEsperado) {
+        page.navigate("/entrar");
+        entrar(email, senha);
+        assertThat(page).hasURL(Pattern.compile(":" + port + destinoEsperado + "$"));
+        // A URL muda antes de a página terminar de carregar; navegar nesse meio-tempo é abortado no Firefox.
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+    }
+
+    private Locator linkDaConta() {
+        return page.locator("#account-link");
     }
 
     private Locator menu() {
@@ -319,46 +361,62 @@ class NavigationE2ETest {
     }
 
     @Test @Order(15)
-    @DisplayName("Fluxo completo: produto → sacola → checkout → voltar → checkout → confirmação → loja")
-    void fluxoSacolaCheckoutConfirmacao() {
+    @DisplayName("Visitante que tenta finalizar a compra vai ao login e volta com a sacola aberta")
+    void visitanteVaiAoLoginEVoltaParaASacola() {
         abrirLoja();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Adicionar Teclado Type à sacola")).click();
-        assertThat(page.locator("#cart-count")).hasText("1");
-        assertThat(page.locator("#open-cart")).hasAttribute("aria-label", "Abrir carrinho, 1 item");
+        page.locator("#open-cart").click();
 
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Entrar para finalizar")).click();
+        assertThat(page).hasURL(Pattern.compile("/entrar\\?next=%2F%23sacola$"));
+        assertThat(page.locator("#login-reason")).isVisible();
+
+        entrar(CLIENTE, SENHA_CLIENTE);
+        assertThat(page).hasURL(Pattern.compile(":" + port + "/#sacola$"));
+        Locator sacola = page.locator("#cart-dialog");
+        assertThat(sacola).isVisible();
+        assertThat(sacola).containsText("Teclado Type");                       // a sacola foi preservada
+        assertThat(sacola.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Ir para o checkout"))).isVisible();
+    }
+
+    @Test @Order(16)
+    @DisplayName("Cliente compra: sacola → checkout → voltar → confirmação → Meus pedidos")
+    void fluxoDeCompraDoCliente() {
+        entrarComo(CLIENTE, SENHA_CLIENTE, "/conta");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Continuar comprando")).click();
+        assertThat(page).hasURL(Pattern.compile(":" + port + "/#catalogo$"));
+
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Adicionar Mouse Move à sacola")).click();
+        assertThat(page.locator("#cart-count")).hasText("1");
         page.locator("#open-cart").click();
         Locator sacola = page.locator("#cart-dialog");
-        assertThat(sacola).containsText("Teclado Type");
-
         sacola.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Ir para o checkout")).click();
+
         Locator checkout = page.locator("#checkout-dialog");
         assertThat(checkout).isVisible();
-        assertThat(sacola).isHidden();
+        assertThat(page.locator("#checkout-email")).hasText(CLIENTE);
+        assertThat(page.getByLabel("Nome completo")).hasValue("Ana Cliente");   // preenchido pelo perfil
+        assertThat(page.getByLabel("CEP")).hasValue("01001-000");
 
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("← Voltar para a sacola")).click();
         assertThat(sacola).isVisible();
         assertThat(checkout).isHidden();
-
         sacola.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Ir para o checkout")).click();
-        page.getByLabel("Nome completo").fill("Cliente de Teste");
-        page.getByLabel("E-mail").fill("teste@example.com");
-        page.getByLabel("Endereço e número").fill("Rua Exemplo, 123");
-        page.getByLabel("Cidade").fill("São Paulo");
-        page.getByLabel("CEP").fill("01001-000");
         page.locator("#submit-order").click();
 
         Locator sucesso = page.locator("#success-dialog");
-        assertThat(sucesso).isVisible();
         assertThat(sucesso).containsText("Pedido registrado");
-        sucesso.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Continuar explorando")).click();
-        assertThat(sucesso).isHidden();
         assertThat(page.locator("#cart-count")).hasText("0");
-        assertThat(page.locator(".product-card")).hasCount(8);
+        sucesso.getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName("Ver meus pedidos")).click();
+
+        assertThat(page).hasURL(Pattern.compile("/conta#pedidos$"));
+        assertThat(page.locator("#orders .order-card")).hasCount(1);
+        assertThat(page.locator("#orders")).containsText("Mouse Move");
     }
 
     // ------------------------------------------------------------------ Rotas inexistentes e celular
 
-    @Test @Order(16)
+    @Test @Order(17)
     @DisplayName("Rota inexistente mostra página 404 da loja com caminho de volta ao início")
     void rotaInexistenteRedirecionaParaLoja() {
         Response resposta = page.navigate("/pagina-que-nao-existe");
@@ -376,7 +434,7 @@ class NavigationE2ETest {
         assertThat(page.locator(".product-card")).hasCount(8);
     }
 
-    @Test @Order(17)
+    @Test @Order(18)
     @DisplayName("No celular, o menu mantém 'Explorar', 'Sobre' e a sacola funcionando")
     void navegacaoNoCelular() {
         page.setViewportSize(390, 844);
@@ -392,6 +450,185 @@ class NavigationE2ETest {
         page.locator("#open-cart").click();
         assertThat(page.locator("#cart-dialog")).isVisible();
         assertThat(page.locator("#cart-dialog")).isInViewport();
+        page.keyboard().press("Escape");
+
+        assertThat(linkDaConta()).isVisible();                                   // ícone de conta no celular
+        linkDaConta().click();
+        assertThat(page).hasURL(Pattern.compile("/entrar$"));
+    }
+
+    // ------------------------------------------------------------------ Perfis: visitante, cliente e administrador
+
+    @Test @Order(19)
+    @DisplayName("Link de conta no cabeçalho muda conforme o perfil: Entrar, Minha conta, Painel admin")
+    void linkDaContaPorPerfil() {
+        abrirLoja();
+        assertThat(linkDaConta()).hasAttribute("aria-label", "Entrar");
+        assertThat(linkDaConta()).hasAttribute("href", "/entrar");
+
+        entrarComo(CLIENTE, SENHA_CLIENTE, "/conta");
+        page.navigate("/");
+        assertThat(linkDaConta()).hasAttribute("aria-label", "Minha conta");
+        linkDaConta().click();
+        assertThat(page).hasURL(Pattern.compile("/conta$"));
+
+        page.locator(".side-nav").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Sair")).click();
+        assertThat(page).hasURL(Pattern.compile(":" + port + "/$"));
+        entrarComo(ADMIN, SENHA_ADMIN, "/admin");
+        page.navigate("/");
+        assertThat(linkDaConta()).hasAttribute("aria-label", "Painel admin");
+        linkDaConta().click();
+        assertThat(page).hasURL(Pattern.compile("/admin$"));
+    }
+
+    @Test @Order(20)
+    @DisplayName("Entrar e Criar conta se ligam e preservam o destino (?next)")
+    void entrarECadastroSeLigam() {
+        page.navigate("/entrar?next=%2Fconta%23pedidos");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Criar conta")).click();
+        assertThat(page).hasURL(Pattern.compile("/cadastro\\?next=%2Fconta%23pedidos$"));
+        assertThat(page.locator("#page-title")).hasText("Criar conta.");
+
+        page.locator(".auth-switch").getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName("Entrar")).click();
+        assertThat(page).hasURL(Pattern.compile("/entrar\\?next=%2Fconta%23pedidos$"));
+    }
+
+    @Test @Order(21)
+    @DisplayName("Cadastro cria a conta de cliente e leva para Minha conta")
+    void cadastroLevaParaAConta() {
+        page.navigate("/cadastro");
+        page.getByLabel("Nome completo").fill("Bruno Novo");
+        page.getByLabel("E-mail").fill("bruno.e2e@aura.dev");
+        page.getByLabel("Senha", new Page.GetByLabelOptions().setExact(true)).fill("Bruno2026");
+        page.getByLabel("Confirmar senha").fill("Bruno2026");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Criar minha conta")).click();
+
+        assertThat(page).hasURL(Pattern.compile("/conta$"));
+        assertThat(page.locator("#greeting")).hasText("Olá, Bruno.");
+        assertThat(page.locator("#orders")).containsText("Nenhum pedido ainda");
+        assertThat(linkDaConta()).hasAttribute("aria-label", "Minha conta");
+    }
+
+    @Test @Order(22)
+    @DisplayName("Página protegida redireciona o visitante ao login e volta para ela depois de entrar")
+    void paginaProtegidaRedirecionaEVolta() {
+        Response resposta = page.navigate("/conta");
+        assertThat(page).hasURL(Pattern.compile("/entrar\\?next=%2Fconta$"));
+        assertThat(resposta.request().redirectedFrom()).isNotNull();             // redirecionamento feito pelo servidor
+
+        entrar(CLIENTE, SENHA_CLIENTE);
+        assertThat(page).hasURL(Pattern.compile(":" + port + "/conta$"));
+        assertThat(page.locator("#greeting")).hasText("Olá, Ana.");
+    }
+
+    @Test @Order(23)
+    @DisplayName("Cliente que tenta abrir o painel admin recebe 403 com caminho de volta")
+    void clienteNoPainelRecebe403() {
+        entrarComo(CLIENTE, SENHA_CLIENTE, "/conta");
+        Response resposta = page.navigate("/admin");
+
+        assertThat(resposta.status()).isEqualTo(403);
+        assertThat(page).hasTitle("Acesso restrito — Aura");
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Voltar para a loja")).click();
+        assertThat(page).hasURL(Pattern.compile(":" + port + "/$"));
+
+        page.navigate("/admin");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar com outra conta")).click();
+        assertThat(page).hasURL(Pattern.compile("/entrar$"));
+        entrar(ADMIN, SENHA_ADMIN);
+        assertThat(page).hasURL(Pattern.compile("/admin$"));
+    }
+
+    @Test @Order(24)
+    @DisplayName("Painel admin: menu lateral, Ver loja e a sacola não permite compra do administrador")
+    void navegacaoNoPainelAdmin() {
+        entrarComo(ADMIN, SENHA_ADMIN, "/admin");
+        assertThat(page.locator("#stats .stat")).hasCount(5);
+        Locator lateral = page.getByRole(AriaRole.NAVIGATION, new Page.GetByRoleOptions().setName("Seções do painel"));
+
+        for (String[] secao : new String[][]{{"Produtos", "produtos"}, {"Pedidos", "pedidos"}, {"Resumo", "resumo"}}) {
+            lateral.getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName(secao[0])).click();
+            assertThat(page).hasURL(Pattern.compile("#" + secao[1] + "$"));
+            assertThat(page.locator("#" + secao[1] + " h2")).isInViewport();
+        }
+
+        lateral.getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName("Ver loja")).click();
+        assertThat(page).hasURL(Pattern.compile(":" + port + "/$"));
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Adicionar Mouse Move à sacola")).click();
+        page.locator("#open-cart").click();
+        assertThat(page.locator("#cart-dialog .admin-note")).isVisible();
+        assertThat(page.locator("#go-checkout")).hasCount(0);
+    }
+
+    @Test @Order(25)
+    @DisplayName("Admin cadastra produto, que aparece na loja; ao desativar, some da loja")
+    void adminCadastraEDesativaProduto() {
+        entrarComo(ADMIN, SENHA_ADMIN, "/admin");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Novo produto")).click();
+        Locator formulario = page.locator("#product-dialog");
+        assertThat(formulario).isVisible();
+        formulario.getByLabel("Nome").fill("Suporte Flow");
+        formulario.getByLabel("Categoria").selectOption("Setup");
+        formulario.getByLabel("Cor").fill("Prata");
+        formulario.getByLabel("Descrição").fill("Suporte de notebook em alumínio.");
+        formulario.getByLabel("Preço (R$)").fill("99.90");
+        formulario.getByLabel("Estoque").fill("7");
+        formulario.getByLabel("Imagem").selectOption("/images/keyboard.svg");
+        formulario.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Salvar produto")).click();
+
+        assertThat(formulario).isHidden();
+        assertThat(page.locator("#product-rows")).containsText("Suporte Flow");
+
+        page.navigate("/");
+        assertThat(page.locator(".product-card")).hasCount(9);
+        assertThat(page.locator(".product-name", new Page.LocatorOptions().setHasText("Suporte Flow"))).isVisible();
+
+        linkDaConta().click();
+        assertThat(page).hasURL(Pattern.compile("/admin$"));
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Desativar Suporte Flow")).click();
+        assertThat(page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Reativar Suporte Flow"))).isVisible();
+        page.navigate("/");
+        assertThat(page.locator(".product-card")).hasCount(8);
+    }
+
+    @Test @Order(26)
+    @DisplayName("Minha conta: menu lateral leva a Perfil, Pedidos e Segurança; perfil salvo aparece no cabeçalho")
+    void navegacaoNaContaDoCliente() {
+        entrarComo(CLIENTE, SENHA_CLIENTE, "/conta");
+        Locator lateral = page.getByRole(AriaRole.NAVIGATION, new Page.GetByRoleOptions().setName("Seções da conta"));
+        for (String[] secao : new String[][]{{"Segurança", "seguranca"}, {"Meus pedidos", "pedidos"}, {"Perfil", "perfil"}}) {
+            lateral.getByRole(AriaRole.LINK, new Locator.GetByRoleOptions().setName(secao[0])).click();
+            assertThat(page).hasURL(Pattern.compile("#" + secao[1] + "$"));
+            assertThat(page.locator("#" + secao[1] + " h2")).isInViewport();
+        }
+
+        page.getByLabel("Nome completo").fill("Ana Souza");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Salvar perfil")).click();
+        assertThat(page.locator("#toast")).hasText("Perfil atualizado.");
+        assertThat(page.locator("#greeting")).hasText("Olá, Ana.");
+
+        page.reload();
+        assertThat(page.getByLabel("Nome completo")).hasValue("Ana Souza");
+    }
+
+    @Test @Order(27)
+    @DisplayName("Sair encerra a sessão: volta à loja e a conta passa a exigir login de novo")
+    void sairEncerraASessao() {
+        entrarComo(CLIENTE, SENHA_CLIENTE, "/conta");
+        page.locator(".side-nav").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Sair")).click();
+
+        assertThat(page).hasURL(Pattern.compile(":" + port + "/$"));
+        assertThat(linkDaConta()).hasAttribute("aria-label", "Entrar");
+        page.navigate("/conta");
+        assertThat(page).hasURL(Pattern.compile("/entrar\\?next=%2Fconta$"));
+    }
+
+    @Test @Order(28)
+    @DisplayName("Quem já está logado e abre /entrar vai direto para a sua área")
+    void logadoNaoVeOLoginDeNovo() {
+        entrarComo(ADMIN, SENHA_ADMIN, "/admin");
+        page.navigate("/entrar");
+        assertThat(page).hasURL(Pattern.compile("/admin$"));
     }
 
     private static String[] repetir(String valor, int vezes) {

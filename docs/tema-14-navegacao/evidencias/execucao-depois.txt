@@ -1,7 +1,18 @@
-# Execução DEPOIS das correções — mvn -B verify -Pe2e
+# Execuções finais — versão com perfis (visitante, cliente e administrador)
+# JDK 25 + Maven 3.9.11 (Fedora 44), 19/11/2026
 
-## Navegador: chromium
-[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+## Testes de navegação (Playwright) — mvn -B verify -Pe2e -Dbrowser=<navegador>
+chromium : Tests run: 33, Failures: 0, Errors: 0, Skipped: 0   (3 execuções seguidas, todas aprovadas)
+firefox  : Tests run: 33, Failures: 0, Errors: 0, Skipped: 0   (3 execuções seguidas, todas aprovadas)
 
-## Navegador: firefox
-[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+## Testes de backend — mvn -B verify
+StoreIntegrationTest : Tests run: 7,  Failures: 0
+AccessControlTest    : Tests run: 19, Failures: 0  (Visitante 5 · Cadastro e login 6 · Cliente 4 · Administrador 4)
+Total                : Tests run: 26, Failures: 0, Errors: 0, Skipped: 0
+
+## Frontend (Node) — node --test scripts/test-frontend.cjs
+pass 7, fail 0
+
+## PostgreSQL real — docker compose up --build + scripts/smoke-test.sh
+Migração V3 aplicada sobre o banco existente; administrador inicial criado.
+Smoke test OK: aplicação, banco, catálogo, página inicial e páginas protegidas (/conta → 302, /api/admin → 401).

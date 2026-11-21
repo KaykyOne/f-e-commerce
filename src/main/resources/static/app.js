@@ -12,6 +12,9 @@ let toastTimer;
 let ordering = false;
 let catalogReady = false;
 let hashRestored = false;
+// Usuário logado (null = visitante). Vem do session.js; ausente nos testes de Node.
+let session = null;
+const auth = () => window.AuraSession;
 
 function readCart() {
   try {
@@ -73,6 +76,7 @@ async function loadProducts() {
 function restoreHashTarget() {
   if (hashRestored) return;
   hashRestored = true;
+  if (location.hash === '#sacola') { renderCart(); openDialog('#cart-dialog'); return; }
   if (location.hash.length < 2) return;
   try { document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView(); } catch { /* hash inválido: mantém a posição */ }
 }
@@ -178,7 +182,22 @@ function renderCart() {
     <img src="${escapeHtml(product.image)}" alt="" width="76" height="85"><div><h3>${escapeHtml(product.name)}</h3><p>${money(product.price)}</p>
     <div class="quantity"><button data-quantity="${product.id}" data-change="-1" aria-label="Diminuir quantidade de ${escapeHtml(product.name)}">−</button><span aria-label="Quantidade">${quantity}</span><button data-quantity="${product.id}" data-change="1" aria-label="Aumentar quantidade de ${escapeHtml(product.name)}" ${quantity >= Math.min(product.stock, 99) ? 'disabled' : ''}>+</button></div></div>
     <button class="remove-button" data-remove="${product.id}" aria-label="Remover ${escapeHtml(product.name)}">×</button></div>`).join('');
-  $('#cart-summary').innerHTML = `${summaryHtml(values)}<button id="go-checkout" class="button primary full-width">Ir para o checkout <span aria-hidden="true">↗</span></button><p class="summary-note">Checkout demonstrativo · Sem cobrança</p>`;
+  $('#cart-summary').innerHTML = summaryHtml(values) + checkoutAction();
+}
+
+// Visitante precisa entrar; administrador não compra; cliente segue para o checkout.
+function checkoutAction() {
+  if (!session) return `<a id="login-to-checkout" class="button primary full-width" href="/entrar?next=${encodeURIComponent('/#sacola')}">Entrar para finalizar <span aria-hidden="true">↗</span></a><p class="summary-note">Entre ou crie sua conta. Sua sacola fica guardada.</p>`;
+  if (session.role !== 'CUSTOMER') return '<p class="summary-note admin-note">Você está como administrador. Entre com uma conta de cliente para comprar.</p>';
+  return '<button id="go-checkout" class="button primary full-width">Ir para o checkout <span aria-hidden="true">↗</span></button><p class="summary-note">Checkout demonstrativo · Sem cobrança</p>';
+}
+
+function prefillCheckout() {
+  const form = $('#checkout-form');
+  $('#checkout-email').textContent = session ? session.email : '';
+  for (const [field, value] of [['name', session?.name], ['address', session?.address], ['city', session?.city], ['zipCode', session?.zipCode]]) {
+    if (value && !form.elements[field].value) form.elements[field].value = value;
+  }
 }
 
 function openDialog(selector) {
@@ -212,6 +231,7 @@ document.addEventListener('click', (event) => {
   if (button.id === 'go-checkout') {
     $('#checkout-total').innerHTML = summaryHtml(totals());
     $('#checkout-error').hidden = true;
+    prefillCheckout();
     openDialog('#checkout-dialog');
   }
 });
@@ -245,9 +265,7 @@ $('#checkout-form').addEventListener('submit', async (event) => {
   const data = Object.fromEntries(Array.from(form.elements).filter((element) => element.name).map((element) => [element.name, element.value.trim()]));
   data.items = Object.entries(cart).map(([id, quantity]) => ({ productId: Number(id), quantity }));
   try {
-    const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) });
-    const receipt = await response.json();
-    if (!response.ok) throw new Error(receipt.message || 'Não foi possível confirmar o pedido.');
+    const receipt = await auth().api('/api/orders', { method: 'POST', body: data });
     cart = {};
     saveCart();
     form.reset();
@@ -255,6 +273,7 @@ $('#checkout-form').addEventListener('submit', async (event) => {
     openDialog('#success-dialog');
     await loadProducts();
   } catch (error) {
+    if (error.status === 401 || error.status === 403) { location.assign(`/entrar?next=${encodeURIComponent('/#sacola')}`); return; }
     $('#checkout-error').textContent = error instanceof TypeError ? 'A conexão foi interrompida. O pedido pode ter sido registrado; confira o servidor antes de tentar novamente.' : error.message;
     $('#checkout-error').hidden = false;
     await loadProducts();
@@ -278,3 +297,7 @@ window.addEventListener('storage', (event) => {
 
 updateCount();
 loadProducts();
+auth()?.me().then((user) => {
+  session = user;
+  if ($('#cart-dialog').open) renderCart();
+});

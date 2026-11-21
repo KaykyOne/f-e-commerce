@@ -1,8 +1,8 @@
 # Tema 14 — Teste de interface: Navegação
 
 **Disciplina:** Integração e Entrega Contínua (DevOps) · **Atividade:** Qualidade e Testes de Software
-**Integrante:** Kayky · **Projeto:** Aura Store (Java 21 + Spring Boot 3.5)
-**Ferramenta:** Playwright for Java 1.65 + JUnit 5 + Spring Boot Test
+**Integrante:** Kayky · **Projeto:** Aura Store (Java 21+ · Spring Boot 3.5 · Spring Security)
+**Ferramenta:** Playwright for Java 1.65 + JUnit 5 + Spring Boot Test (+ Spring Security Test e MockMvc para o controle de acesso)
 
 ---
 
@@ -11,7 +11,8 @@
 Um **teste de interface (UI)** verifica o sistema pela tela, do jeito que o usuário usa: abre o
 navegador, clica em links e botões, digita, aperta teclas e confere o que aparece. O **teste de
 navegação** foca nos caminhos entre as partes do sistema: menus, links, botões, redirecionamentos,
-botões Voltar/Avançar e o que acontece quando um endereço não existe.
+botões Voltar/Avançar, o que acontece quando um endereço não existe e **para onde cada perfil de
+usuário é levado** (visitante, cliente e administrador).
 
 É um teste **caixa-preta** e de **ponta a ponta (E2E)**: atravessa frontend (HTML/CSS/JS), backend
 (Spring Boot), API REST e banco de dados ao mesmo tempo.
@@ -23,7 +24,7 @@ botões Voltar/Avançar e o que acontece quando um endereço não existe.
 - **Navegação quebrada = venda perdida.** Se o cliente não chega ao produto, à sacola ou ao checkout,
   o resto do sistema não importa.
 - **Regressão.** Toda alteração em CSS ou JavaScript pode quebrar um caminho. O teste automatizado
-  repete 22 verificações em ~20 segundos, a cada push, sem esforço manual.
+  repete 33 verificações em ~25 segundos, a cada push, sem esforço manual.
 - **Documentação viva.** Cada teste descreve, em português, um caminho que o usuário deve conseguir fazer.
 
 ## 2. Ferramenta escolhida: Playwright for Java
@@ -48,7 +49,8 @@ Também foram usados: **JUnit 5** (organização, testes parametrizados, `@Tag`)
 
 1. **Mapeamento** de todos os elementos de navegação da loja: logo, menu principal (4 links),
    botões do banner, link "Pular para os produtos", botões de categoria, cartões de produto, sacola,
-   checkout, janelas de confirmação, rodapé e versões desktop/celular.
+   checkout, janelas de confirmação, rodapé e versões desktop/celular. Na segunda rodada, também as
+   páginas de **entrar, cadastro, Minha conta e painel do administrador** (seção 5.4).
 2. **Dependência** `com.microsoft.playwright:playwright` (escopo `test`) no `pom.xml`.
 3. **Classe de teste** [`NavigationE2ETest.java`](../../src/test/java/br/com/aura/store/e2e/NavigationE2ETest.java):
    - Sobe a aplicação real em porta aleatória e abre um navegador headless.
@@ -62,7 +64,7 @@ Também foram usados: **JUnit 5** (organização, testes parametrizados, `@Tag`)
    os screenshots e o relatório do Surefire como artefatos.
 6. **Execução, análise das falhas e correção** (seção 5).
 
-## 4. Casos de teste (22 execuções)
+## 4. Casos de teste (33 execuções)
 
 | # | Caso de teste | Resultado esperado |
 | --- | --- | --- |
@@ -80,9 +82,26 @@ Também foram usados: **JUnit 5** (organização, testes parametrizados, `@Tag`)
 | 13–17 | 5 botões de categoria | Cada um filtra a quantidade certa; "Todos" restaura 8 |
 | 18 | Detalhes do produto | Abre pelo nome e pela imagem; fecha pelo × e pela tecla Esc |
 | 19 | Sacola vazia | Mostra o aviso e o botão "Explorar a coleção" fecha a sacola |
-| 20 | Fluxo completo | Produto → sacola → checkout → voltar → checkout → confirmação → loja (contador volta a 0) |
-| 21 | Rota inexistente | HTTP 404 com página da loja e link "Voltar para a loja" que leva a `/` |
-| 22 | Celular (390×844) | Menu mantém "Explorar" e "Sobre"; sacola abre e cabe na tela |
+| 20 | Visitante tenta finalizar | "Entrar para finalizar" → `/entrar?next=/#sacola` → login → volta com a sacola aberta e preservada |
+| 21 | Compra do cliente | Sacola → checkout já preenchido pelo perfil → voltar → confirmação → "Ver meus pedidos" mostra o pedido |
+| 22 | Rota inexistente | HTTP 404 com página da loja e link "Voltar para a loja" que leva a `/` |
+| 23 | Celular (390×844) | Menu mantém "Explorar" e "Sobre"; sacola abre e cabe na tela; ícone de conta leva a `/entrar` |
+| 24 | Link de conta por perfil | Cabeçalho mostra "Entrar", "Minha conta" ou "Painel admin" e leva à área certa |
+| 25 | Entrar ↔ Criar conta | Os links se ligam e preservam o destino `?next=` |
+| 26 | Cadastro | Cria a conta de cliente e leva para Minha conta, já logado |
+| 27 | Página protegida | Visitante em `/conta` é redirecionado pelo servidor ao login e volta para `/conta` depois de entrar |
+| 28 | Cliente no painel admin | HTTP 403 com página da loja; "Voltar para a loja" e "Entrar com outra conta" funcionam |
+| 29 | Painel admin | Menu lateral (Resumo, Produtos, Pedidos), "Ver loja" e sacola sem botão de compra para o admin |
+| 30 | Produto pelo painel | Admin cadastra → aparece na loja (9 produtos); desativa → some da loja (8) |
+| 31 | Minha conta | Menu lateral (Perfil, Meus pedidos, Segurança); perfil salvo persiste após recarregar |
+| 32 | Sair | Volta à loja, cabeçalho mostra "Entrar" e `/conta` exige login de novo |
+| 33 | Já logado em `/entrar` | Vai direto para a sua área (admin → `/admin`) |
+
+Além dos testes de navegação, o [`AccessControlTest.java`](../../src/test/java/br/com/aura/store/AccessControlTest.java)
+verifica as mesmas regras direto na API, com **MockMvc + Spring Security Test** (19 testes): 401 para
+visitante, 403 para perfil errado, CSRF obrigatório, cadastro inválido, e-mail duplicado, login que não
+revela quais e-mails existem, troca de senha, "Meus pedidos" só com os pedidos do próprio cliente e
+CRUD de produtos do administrador.
 
 ## 5. Resultados
 
@@ -118,13 +137,45 @@ identidade visual e **sem nenhum link de volta** para a loja
 
 ### 5.3 Execução após as correções — 22 de 22 aprovados
 
-| Navegador | Testes | Falhas | Tempo |
-| --- | --- | --- | --- |
-| Chromium | 22 | 0 | ~15 s |
-| Firefox | 22 | 0 | ~27 s |
+Chromium e Firefox: 22/22, 3 execuções seguidas sem falhas intermitentes.
 
-Os testes também foram executados 3 vezes seguidas, sem falhas intermitentes. Os 7 testes de
-integração que já existiam continuam passando no `mvn verify` padrão.
+### 5.4 Segunda rodada: perfis de usuário (visitante, cliente e administrador)
+
+A loja ganhou login, cadastro, área do cliente ("Minha conta": perfil, meus pedidos e segurança) e um
+painel do administrador (resumo, produtos e pedidos), com **Spring Security**. Isso cria muitos
+caminhos novos — e redirecionamentos que dependem de quem está logado. Os testes foram ampliados
+de 22 para 33 casos de navegação, e o backend ganhou 19 testes de controle de acesso.
+
+| Página | Visitante | Cliente | Administrador |
+| --- | --- | --- | --- |
+| Loja `/` | ✔ (finalizar compra pede login) | ✔ compra | ✔ não compra |
+| `/entrar`, `/cadastro` | ✔ | vai para `/conta` | vai para `/admin` |
+| `/conta` | redireciona ao login | ✔ | ✔ |
+| `/admin` | redireciona ao login | **403** | ✔ |
+
+Problemas encontrados nesta rodada:
+
+| # | Problema | Quem encontrou | Correção |
+| --- | --- | --- | --- |
+| 3 | A API respondia **302** (redirecionamento para a página de login) em vez de **401** para visitante: o JavaScript recebia uma página HTML no lugar de um erro | `AccessControlTest` (esperado 401, obtido 302) | Um único *entry point*: `/api/**` → 401; páginas → `/entrar?next=...` |
+| 4 | A dica "Mínimo de 8 caracteres…" estava **dentro** do rótulo: o nome acessível do campo virava "Senha Mínimo de 8 caracteres…" (leitores de tela leem assim) | Teste E2E (`getByLabel("Senha", exact)` não encontrava o campo) | Dica fora do `<label>`, ligada por `aria-describedby` |
+| 5 | Teste instável só no Firefox: navegar logo após o login abortava (`NS_BINDING_ABORTED`) porque a URL muda antes de a página terminar de carregar | 1 falha em 1 execução no Firefox | O teste espera a rede ficar ociosa após o login |
+
+O problema 5 era do teste, não da loja. Ele mostra por que vale repetir a bateria e rodar em mais
+de um navegador.
+
+### 5.5 Resultado final
+
+| Bateria | Testes | Falhas |
+| --- | --- | --- |
+| Navegação (Playwright) — Chromium | 33 | 0 (3 execuções seguidas) |
+| Navegação (Playwright) — Firefox | 33 | 0 (3 execuções seguidas) |
+| Backend (`mvn verify`): integração + controle de acesso | 26 | 0 |
+| Frontend (Node) | 7 | 0 |
+
+A migração do banco (V3: usuários, perfis e exclusão lógica de produtos) também foi validada no
+**PostgreSQL real** via Docker Compose, com o smoke test conferindo que `/conta` redireciona (302) e
+que a API do admin recusa visitante (401). Prints das telas novas: `evidencias/10-*` a `20-*`.
 
 Apresentação: [`Apresentacao-Tema14-Navegacao.pptx`](Apresentacao-Tema14-Navegacao.pptx) (com notas do apresentador).
 
@@ -141,6 +192,8 @@ mvn verify -Pe2e                         # Chromium, sem janela
 mvn verify -Pe2e -Dbrowser=firefox       # Firefox
 mvn verify -Pe2e -Dheaded=true -DslowMo=500   # com janela visível, em câmera lenta (apresentação)
 
+# Contas: admin@aura.dev / AuraAdmin2026 (criado automaticamente); clientes: crie em /cadastro
+
 # Testes de backend (sem navegador)
 mvn verify
 ```
@@ -152,5 +205,7 @@ Screenshots: `target/evidencias/navegacao/<navegador>/`. Relatório: `target/sur
 Os testes de navegação cobrem os caminhos que o cliente usa para chegar ao produto e concluir a
 compra. Na primeira execução eles encontraram dois defeitos que nenhum teste de backend detectaria:
 uma falha de tempo entre o carregamento assíncrono e o scroll do navegador, e uma rota de erro sem
-saída. Depois das correções, os 22 casos passam em Chromium e Firefox, e o GitHub Actions repete a
-verificação a cada push, impedindo que esses caminhos quebrem de novo sem que ninguém perceba.
+saída. Com os perfis de usuário, os caminhos passaram a depender de quem está logado, e os testes
+encontraram mais dois defeitos (resposta 302 em vez de 401 na API e um rótulo inacessível). Hoje os
+33 casos passam em Chromium e Firefox, e o GitHub Actions repete a verificação a cada push,
+impedindo que esses caminhos quebrem de novo sem que ninguém perceba.
